@@ -47,7 +47,7 @@ def gen_df(dict, today, number_of_quotes):
     Price_list = (Spot * np.exp(np.array(sorted_array)*Volatility)).tolist()
     dates_list = [(today - BDay(a + 1)) for a in range(0, number_of_quotes)] #
 
-    columns = ['Date', 'Price'] #, 'Curncy']
+    columns = ['Date', 'Price']
     df_output = pd.DataFrame(list(zip(dates_list, Price_list)), columns = columns)
     df_output['Date'] = pd.to_datetime(df_output['Date'])
     df_output['Ticker'] = Ticker
@@ -57,11 +57,12 @@ def gen_df(dict, today, number_of_quotes):
     return df_output
 
 
-# def historical_var(var_interval, number_of_quotes, df):
-#     number_least = int((1 - var_interval) * number_of_quotes)
-#     df['Value change'] = df['Price change'] * df['value_share']
-#     var = df['Price change'].nsmallest(number_least).iloc[-1]
-#     return var
+def historical_var(var_interval, number_of_quotes, df):
+    number_least = int((1 - var_interval) * number_of_quotes)
+    df['Value change'] = df['Price change'] * df['value_share']
+    df_combined = df_full[['Value change', 'Date']].groupby("Date").sum()
+    var = df['Value change'].nsmallest(number_least).iloc[-1]
+    return var
 
 def gen_df_rub(dict, today, number_of_quotes, df_crncy):
     df = gen_df(dict, today, number_of_quotes)
@@ -74,7 +75,7 @@ def gen_df_rub(dict, today, number_of_quotes, df_crncy):
     df_output['Price change'] = (df_output['Price in RUB'] - df_output['Shift Price in RUB']) / df_output['Shift Price in RUB']
     return df_output
 
-def historical_var(var_interval, number_of_quotes, df):
+def historical_var_1(var_interval, number_of_quotes, df):
     number_least = int((1 - var_interval) * number_of_quotes)
     var = df['Price change'].nsmallest(number_least).iloc[-1]
     return var
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     df_crncy = gen_df(dict_usdrub, today, number_of_quotes)
     for dict in dicts:
         df = gen_df_rub(dict, today, number_of_quotes, df_crncy)
-        var_h = historical_var(var_interval, number_of_quotes, df)
+        var_h = historical_var_1(var_interval, number_of_quotes, df)
         df['VaR historical'] = var_h
         print('VaR historical for ', dict['Ticker'], " ", var_h)
         try:
@@ -108,5 +109,5 @@ if __name__ == "__main__":
         dict['value_share'] = value_share
         new_dict_value_share[dict['Ticker']] = value_share
     df_full['value_share'] = [new_dict_value_share[a] for a in df_full['Ticker']]
-    # var = historical_var(var_interval, number_of_quotes, df_full)
-    # print(var)
+    var = historical_var(var_interval, number_of_quotes, df_full)
+    print('Combined var ', var)
